@@ -5,7 +5,9 @@
 
 # Set up Terminal Code 
 pip install -U "huggingface_hub[cli]"
+
 huggingface-cli login
+
 pip install -r requirements.txt
 
  # OPENAI KEY
