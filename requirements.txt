@@ -5,3 +5,4 @@ dataclasses
 tensorflow>=2.10.0
 accelerate>=0.20.0
 pandas
+openai
