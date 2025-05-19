@@ -4,7 +4,7 @@ from typing import Optional
 
 @dataclass
 class GRPOConfig:
-    model_name: str = "microsoft/phi-1_5"
+    model_name: str = "meta-llama/Llama-3.1-8B"
     learning_rate: float = 1.41e-5
     batch_size: int = 1
     max_length: int = 64
