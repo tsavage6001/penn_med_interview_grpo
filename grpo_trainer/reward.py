@@ -3,12 +3,14 @@ import pandas as pd
 from typing import List, Dict
 from openai import OpenAI
 import os
+import openai
+import difflib 
 
 class RewardCalculator:
     
     
     def __init__(self):
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.client = OpenAI(api_key=os.getenv("OPENAIKEY"))
         self.medical_data = pd.DataFrame({
             'case': [
                 "I've had persistent headaches and nausea for two weeks",
@@ -43,26 +45,36 @@ class RewardCalculator:
         )
         return response.choices[0].message.content.strip().lower()
 
+    import difflib
+
     def compare_diagnoses(self, llm_diagnosis: str, case: str) -> float:
-        """Compare LLM diagnosis with expected diagnosis"""
-        expected = self.medical_data[
-            self.medical_data['case'] == case
-        ]['diagnosis'].iloc[0].lower()
-        
-        prompt = f"""Compare these two diagnoses.  If they are the same write 1, if they are different write 0: 
-        Diagnosis 1: {llm_diagnosis}
-        Diagnosis 2: {expected}
-        
-        Return only the numerical score."""
-        
+        """Compare LLM diagnosis with expected diagnosis using fuzzy matching and LLM response."""
+        # Fuzzy match the case
+        cases = self.medical_data['case'].tolist()
+        match = difflib.get_close_matches(case, cases, n=1)
+        if match:
+            expected = self.medical_data[self.medical_data['case'] == match[0]]['diagnosis'].iloc[0].lower()
+        else:
+            print(f"Warning: No close match found for case: {case!r}")
+            return 0.0
+    
+        prompt = f"""Compare these two diagnoses. If they are approximately the same (ex heart attack and myocardial infarction) write a one word answer of "same", if they are different write a one word answer of "different": 
+    Diagnosis 1: {llm_diagnosis}
+    Diagnosis 2: {expected}
+    """
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0
         )
-        return float(response.choices[0].message.content.strip())
-
-    
+        result = response.choices[0].message.content.strip().lower()
+        if "same" in result:
+            return 1.0
+        elif "different" in result:
+            return 0.0
+        else:
+            print(f"Warning: Unexpected LLM response: {result!r}")
+            return 0.0
 
     def calculate_reward(
         self,
