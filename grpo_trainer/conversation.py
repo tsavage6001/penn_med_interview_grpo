@@ -135,29 +135,33 @@ class ConversationGenerator:
             )
 
         new_branches = []
+        # In _generate_doctor_turns:
         for i in range(self.config.branches):
             response_ids = outputs.sequences[i][inputs["input_ids"].shape[1]:]
+            # Truncate to max_length tokens
+            response_ids = response_ids[:self.config.max_length]
             turn = ConversationTurn(
                 speaker="Doctor",
                 text=self.tokenizer.decode(response_ids, skip_special_tokens=True),
                 input_ids=inputs["input_ids"][0],
-                response_ids=outputs.sequences[i]
+                response_ids=response_ids
             )
             new_branch = branch.copy()
             new_branch.append(turn)
             new_branches.append(new_branch)
-            
             self._print_conversation(new_branch, branch_idx * self.config.branches + i + 1)
-        
+                
         return new_branches
 
     def _generate_patient_turn(self, branch: List[ConversationTurn]) -> List[ConversationTurn]:
-        # Determine case index from the initial patient input
+    # Determine case index from the initial patient input
         initial_case = branch[0].text
         case_idx = self.medical_data[self.medical_data['case'] == initial_case].index[0]
         
         prompt = self._build_prompt(branch, case_idx)
         turn = self.generate_turn(prompt, "Patient")
+        # Truncate response_ids to max_length
+        turn.response_ids = turn.response_ids[:self.config.max_length]
         new_branch = branch.copy()
         new_branch.append(turn)
         self._print_conversation(new_branch, len(new_branch))
